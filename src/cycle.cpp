@@ -49,7 +49,7 @@ Status initSimulator(CacheConfig& iCacheConfig, CacheConfig& dCacheConfig, Memor
     simulator->setMemory(mem);
     iCache = new Cache(iCacheConfig, I_CACHE);
     dCache = new Cache(dCacheConfig, D_CACHE);
-    doneInst = nop(IDLE); 
+    doneInst = nop(IDLE);
     return SUCCESS;
 }
 
@@ -75,7 +75,7 @@ Status runCycles(uint64_t cycles) {
         count++;
         cycleCount++;
 
-        Simulator::Instruction ID = pipelineInfo.idInst; 
+        Simulator::Instruction ID = pipelineInfo.idInst;
         Simulator::Instruction EX = pipelineInfo.exInst;
 
         bool stall = false;
@@ -83,7 +83,7 @@ Status runCycles(uint64_t cycles) {
         bool branchStall = false;
 
         // Check load-use stalls (no need to stall if the destination register is x0)
-       
+
 
         if (EX.readsMem && EX.rd != 0) {
             if (EX.rd == ID.rs1 || EX.rd == ID.rs2) {
@@ -116,7 +116,7 @@ Status runCycles(uint64_t cycles) {
         }
 
         // TAKE CARE OF MEM
-        
+
         // Need to do some forwarding stuff here I think
 
         // Do a WB to MEM forward to give load to a store (load-store forwarding)
@@ -125,7 +125,7 @@ Status runCycles(uint64_t cycles) {
                 pipelineInfo.exInst.op2Val = pipelineInfo.wbInst.memResult;
             }
         }
-        
+
 
         pipelineInfo.memInst = simulator->simMEM(pipelineInfo.exInst);
         if (pipelineInfo.memInst.isHalt || pipelineInfo.memInst.isNop) {
@@ -214,11 +214,11 @@ Status runCycles(uint64_t cycles) {
                     }
                 }
             }
-            
+
             if (branchStall) {
                 pipelineInfo.idInst = nop(BUBBLE);
             } else {
-                if (newIDInst.opcode == OP_BRANCH || newIDInst.opcode == OP_JALR) { 
+                if (newIDInst.opcode == OP_BRANCH || newIDInst.opcode == OP_JALR) {
                     if (hazard(pipelineInfo.memInst, newIDInst.rs1)) {
                         if (pipelineInfo.memInst.readsMem) {
                             newIDInst.op1Val = pipelineInfo.memInst.memResult;
@@ -273,7 +273,7 @@ Status runCycles(uint64_t cycles) {
                     flush = true;
                     PC = pipelineInfo.idInst.nextPC;
                 }
-                
+
             }
         }
 
