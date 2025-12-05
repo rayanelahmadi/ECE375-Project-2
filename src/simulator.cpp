@@ -73,8 +73,8 @@ Simulator::Instruction Simulator::simDecode(Instruction inst) {
             }
             break;
         case OP_INTW:
-            if ((inst.funct3 == FUNCT3_ADD && (inst.funct7 == FUNCT7_ADD || inst.funct7 == FUNCT7_SUB)) || 
-                inst.funct3 == FUNCT3_SLL || (inst.funct3 == FUNCT3_SR && (inst.funct7 == FUNCT7_ARITH || 
+            if ((inst.funct3 == FUNCT3_ADD && (inst.funct7 == FUNCT7_ADD || inst.funct7 == FUNCT7_SUB)) ||
+                inst.funct3 == FUNCT3_SLL || (inst.funct3 == FUNCT3_SR && (inst.funct7 == FUNCT7_ARITH ||
                 inst.funct7 == FUNCT7_LOGICAL))) {
                 inst.doesArithLogic = true;
                 inst.writesRd = true;
@@ -97,7 +97,7 @@ Simulator::Instruction Simulator::simDecode(Instruction inst) {
             }
             break;
         case OP_INTIMM:
-            if (inst.funct3 == FUNCT3_ADD || inst.funct3 == FUNCT3_SLL || inst.funct3 == FUNCT3_SLT || 
+            if (inst.funct3 == FUNCT3_ADD || inst.funct3 == FUNCT3_SLL || inst.funct3 == FUNCT3_SLT ||
                 inst.funct3 == FUNCT3_SLTU || inst.funct3 == FUNCT3_XOR || (inst.funct3 == FUNCT3_SR &&
                 (inst.funct7 >> 1 == UPPERIMM_ARITH || inst.funct7 >> 1 == UPPERIMM_LOGICAL)) ||
                 inst.funct3 == FUNCT3_OR || inst.funct3 == FUNCT3_AND) {
@@ -110,7 +110,7 @@ Simulator::Instruction Simulator::simDecode(Instruction inst) {
             break;
         case OP_INTIMMW:
             if (inst.funct3 == FUNCT3_ADD || inst.funct3 == FUNCT3_SLL ||
-                (inst.funct3 == FUNCT3_SR && (inst.funct7 == FUNCT7_ARITH || 
+                (inst.funct3 == FUNCT3_SR && (inst.funct7 == FUNCT7_ARITH ||
                 inst.funct7 == FUNCT7_LOGICAL))) {
                 inst.doesArithLogic = true;
                 inst.writesRd = true;
@@ -182,7 +182,7 @@ Simulator::Instruction Simulator::simNextPCResolution(Instruction inst) {
         extractBits(imm7, 5, 0) << 5 |
         extractBits(imm5, 4, 1) << 1 |
         extractBits(imm5, 0, 0) << 11,
-        12); // B-type immediate 
+        12); // B-type immediate
     uint64_t jalTarget = inst.PC + sext64(
         extractBits(imm20, 19, 19) << 20 |
         extractBits(imm20, 18, 9) << 1 |
@@ -435,11 +435,10 @@ Simulator::Instruction Simulator::simCommit(Instruction inst, REGS &regData) {
 // You may find it useful to call functional simulation functions above
 
 Simulator::Instruction Simulator::simIF(uint64_t PC) {
-    // throw std::runtime_error("simIF not implemented yet"); // TODO implement IF 
+    // throw std::runtime_error("simIF not implemented yet"); // TODO implement IF
     Instruction inst = simFetch(PC, memory);
     // inst.instructionID = din++;
     return inst;
-    
 }
 
 Simulator::Instruction Simulator::simID(Simulator::Instruction inst) {

@@ -9,7 +9,7 @@ struct CacheConfig {
     uint64_t cacheSize;
     // Cache block size in bytes.
     uint64_t blockSize;
-    // Type of cache: set associativity 
+    // Type of cache: set associativity
     uint64_t ways;
     // Additional miss latency in cycles.
     uint64_t missLatency;
@@ -26,7 +26,7 @@ enum CacheOperation { CACHE_READ = false, CACHE_WRITE = true };
 
 class Cache {
 private:
-    uint64_t hits, misses;    
+    uint64_t hits, misses;
     CacheDataType type;
 
 public:
