@@ -244,7 +244,7 @@ Simulator::Instruction Simulator::simArithLogic(Instruction inst) {
     uint64_t imm12  = extractBits(inst.instruction, 31, 20);
     uint64_t upperImm12 = extractBits(inst.instruction, 31, 26);
     uint64_t imm20  = extractBits(inst.instruction, 31, 12);
-    
+
     if (inst.opcode == OP_INT && (
         inst.funct3 == FUNCT3_SLL || inst.funct3 == FUNCT3_SR)) {
         // For SLL and SR, only low 6 bits of rs2 are considered in
@@ -389,7 +389,7 @@ Simulator::Instruction Simulator::simAddrGen(Instruction inst) {
     uint64_t imm7   = inst.funct7;
     uint64_t imm12  = extractBits(inst.instruction, 31, 20);
     int64_t storeImm = sext64((imm7 << 5) | imm5, 11); // S-type immediate
-    
+
     if (inst.readsMem) {
         inst.memAddress = inst.op1Val + sext64(imm12, 11);
     } else if (inst.writesMem) {
@@ -408,7 +408,7 @@ Simulator::Instruction Simulator::simMemAccess(Instruction inst, MemoryStore *my
     if (inst.readsMem) {
         uint64_t value;
         myMem->getMemValue(inst.memAddress, value, size);
-        
+
         if (inst.funct3 == FUNCT3_B || inst.funct3 == FUNCT3_H || inst.funct3 == FUNCT3_W) {
             inst.memResult = sext64(value, size * 8 - 1);
         } else {
