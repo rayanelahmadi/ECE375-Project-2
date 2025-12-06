@@ -6,6 +6,12 @@
 #include "MemoryStore.h"
 #include "RegisterInfo.h"
 
+// Exception codes
+#define EXCEPTION_ILLEGAL_INSTRUCTION 1
+#define EXCEPTION_MISALIGNED_LOAD     2
+#define EXCEPTION_MISALIGNED_STORE    3
+#define EXCEPTION_MEMORY_ACCESS_FAULT 4
+
 class Simulator {
    private:
     union REGS {
@@ -61,6 +67,9 @@ class Simulator {
 
         // known by MEM
         bool     memException = false;
+        // exception flag and code
+        bool     isException = false;
+        uint64_t exceptionCode = 0;
         uint64_t memResult = 0;
         uint64_t valToWrite = 0;
 

@@ -29,11 +29,25 @@ void Simulator::dumpRegMem(const std::string& output_name) {
 Simulator::Instruction Simulator::simFetch(uint64_t PC, MemoryStore *myMem) {
     // fetch current instruction
     uint64_t instruction;
-    myMem->getMemValue(PC, instruction, WORD_SIZE);
-    instruction = (uint32_t)instruction;
-
     Instruction inst;
     inst.PC = PC;
+
+    if (myMem == nullptr) {
+        inst.isException = true;
+        inst.exceptionCode = EXCEPTION_MEMORY_ACCESS_FAULT;
+        inst.nextPC = EXCEPTION_HANDLER;
+        return inst;
+    }
+
+    int ret = myMem->getMemValue(PC, instruction, WORD_SIZE);
+    if (ret) {
+        inst.isException = true;
+        inst.exceptionCode = EXCEPTION_MEMORY_ACCESS_FAULT;
+        inst.nextPC = EXCEPTION_HANDLER;
+        return inst;
+    }
+
+    instruction = (uint32_t)instruction;
     inst.instruction = instruction;
     return inst;
 }
@@ -389,6 +403,9 @@ Simulator::Instruction Simulator::simAddrGen(Instruction inst) {
     uint64_t imm7   = inst.funct7;
     uint64_t imm12  = extractBits(inst.instruction, 31, 20);
     int64_t storeImm = sext64((imm7 << 5) | imm5, 11); // S-type immediate
+    MemEntrySize size = (inst.funct3 == FUNCT3_B || inst.funct3 == FUNCT3_BU) ? BYTE_SIZE :
+                    (inst.funct3 == FUNCT3_H || inst.funct3 == FUNCT3_HU) ? HALF_SIZE :
+                    (inst.funct3 == FUNCT3_W || inst.funct3 == FUNCT3_WU) ? WORD_SIZE : DOUBLE_SIZE;
 
     if (inst.readsMem) {
         inst.memAddress = inst.op1Val + sext64(imm12, 11);
@@ -405,29 +422,58 @@ Simulator::Instruction Simulator::simMemAccess(Instruction inst, MemoryStore *my
                     (inst.funct3 == FUNCT3_H || inst.funct3 == FUNCT3_HU) ? HALF_SIZE :
                     (inst.funct3 == FUNCT3_W || inst.funct3 == FUNCT3_WU) ? WORD_SIZE : DOUBLE_SIZE;
 
+     // Checks for misaligned access
+    uint64_t align = static_cast<uint64_t>(size);
+    if ((inst.readsMem || inst.writesMem) && (inst.memAddress % align != 0)) {
+        inst.isException = true;
+        inst.exceptionCode = inst.readsMem ? EXCEPTION_MISALIGNED_LOAD : EXCEPTION_MISALIGNED_STORE;
+        inst.nextPC = EXCEPTION_HANDLER;
+        return inst;
+    }
+    
     if (inst.readsMem) {
         uint64_t value;
-        myMem->getMemValue(inst.memAddress, value, size);
-
+        int ret = myMem->getMemValue(inst.memAddress, value, size);
+        if (ret) {
+            // memory access fault
+            inst.isException = true;
+            inst.exceptionCode = EXCEPTION_MEMORY_ACCESS_FAULT;
+            inst.nextPC = EXCEPTION_HANDLER;
+            return inst;
+        }
+        
         if (inst.funct3 == FUNCT3_B || inst.funct3 == FUNCT3_H || inst.funct3 == FUNCT3_W) {
             inst.memResult = sext64(value, size * 8 - 1);
         } else {
             inst.memResult = value;
         }
     } else if (inst.writesMem) {
-        myMem->setMemValue(inst.memAddress, inst.op2Val, size);
+        int ret = myMem->setMemValue(inst.memAddress, inst.op2Val, size);
+        if (ret) {
+            inst.isException = true;
+            inst.exceptionCode = EXCEPTION_MEMORY_ACCESS_FAULT;
+            inst.nextPC = EXCEPTION_HANDLER;
+            return inst;
+        }
     }
 
     return inst;
 }
-
 // Write back results to registers
 Simulator::Instruction Simulator::simCommit(Instruction inst, REGS &regData) {
-    if (inst.readsMem) {
-        regData.registers[inst.rd] = inst.memResult;
-    } else {
-        regData.registers[inst.rd] = inst.arithResult;
+    if (inst.isException) {
+        return inst; 
     }
+    
+    if (inst.writesRd && inst.rd != 0){
+        if (inst.readsMem) {
+            regData.registers[inst.rd] = inst.memResult;
+        } else {
+            regData.registers[inst.rd] = inst.arithResult;
+        }
+    }
+
+    regData.registers[0] = 0;
     return inst;
 }
 
@@ -445,7 +491,14 @@ Simulator::Instruction Simulator::simID(Simulator::Instruction inst) {
     // throw std::runtime_error("simID not implemented yet"); // TODO implement ID
     inst = simDecode(inst);
     inst.instructionID = din++;
-    if (!inst.isLegal || inst.isHalt) {
+    if (!inst.isLegal) {
+        // Illegal instruction detected in ID: raise exception and squash
+        inst.isException = true;
+        inst.exceptionCode = EXCEPTION_ILLEGAL_INSTRUCTION;
+        inst.nextPC = EXCEPTION_HANDLER;
+        return inst;
+    }
+    if (inst.isHalt) {
         return inst;
     }
     inst = simOperandCollection(inst, regData);
