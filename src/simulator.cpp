@@ -444,10 +444,13 @@ Simulator::Instruction Simulator::simIF(uint64_t PC) {
 Simulator::Instruction Simulator::simID(Simulator::Instruction inst) {
     // throw std::runtime_error("simID not implemented yet"); // TODO implement ID
     inst = simDecode(inst);
-    inst.instructionID = din++;
-    if (!inst.isLegal || inst.isHalt) {
+    if (inst.isHalt || inst.isNop) {
+        return inst; // do not count halts/nops here
+    }
+    if (!inst.isLegal) {
         return inst;
     }
+    inst.instructionID = din++; // count only legal, non-NOP, non-halt
     inst = simOperandCollection(inst, regData);
     inst = simNextPCResolution(inst);
     return inst;
