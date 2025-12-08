@@ -28,7 +28,6 @@ class Cache {
 private:
     uint64_t hits, misses;
     CacheDataType type;
-    // Derived geometry
     uint64_t numberOfSets;
     uint64_t blockOffsetBits;
     uint64_t setIndexBits;
@@ -36,13 +35,13 @@ private:
     struct CacheLine {
         bool isValid;
         uint64_t tag;
-        uint64_t lruTimestamp; // larger value means more recently used
+        uint64_t lruTimestamp;
     };
 
-    // One vector per set; each set has 'ways' lines
+    // One vector per set
     std::vector<std::vector<CacheLine>> sets;
 
-    // Monotonic timestamp used to implement true LRU
+    // Timestamp for LRU
     uint64_t lruClock = 0;
 
     inline uint64_t maskForBits(uint64_t bitCount) const {
@@ -51,7 +50,6 @@ private:
     }
 
     inline uint64_t log2u64(uint64_t value) const {
-        // Precondition per spec: value is power of two and > 0
         uint64_t bits = 0;
         while ((1ULL << bits) < value) bits++;
         return bits;

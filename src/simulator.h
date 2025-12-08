@@ -65,7 +65,7 @@ class Simulator {
         uint64_t valToWrite = 0;
 
         // known by WB
-        uint64_t instructionID = 0;  // din of the instruction
+        uint64_t instructionID = 0;
 
         // Used for stage status tracking in cycle
         StageStatus status = NORMAL;
@@ -87,10 +87,10 @@ class Simulator {
     Instruction simMemAccess(Instruction inst, MemoryStore *myMem);
     Instruction simCommit(Instruction inst, REGS &regData);
 
-    // Simulate an instruction functionally in a single step
+    // Simulate instruction
     Instruction simInstruction(uint64_t PC);
 
-    // Simulate pipeline stages (project 2 TODO)
+    // Simulate pipeline stages
     Instruction simIF(uint64_t PC);
     Instruction simID(Instruction inst);
     Instruction simEX(Instruction inst);

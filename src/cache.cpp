@@ -26,13 +26,13 @@ Cache::Cache(CacheConfig configParam, CacheDataType cacheType)
 
 // Access method definition
 bool Cache::access(uint64_t address, CacheOperation readWrite) {
-    // Compute set index and tag from address (C++14-compatible, no structured bindings)
+    // Compute set index and tag from address 
     auto indexAndTag = getIndexAndTag(address);
     uint64_t setIndex = indexAndTag.first;
     uint64_t tag = indexAndTag.second;
     auto& set = sets[setIndex];
 
-    // 1) Probe for a hit
+    // Probe for hit
     int hitLineIndex = -1;
     for (int way = 0; way < static_cast<int>(config.ways); ++way) {
         if (set[way].isValid && set[way].tag == tag) {
@@ -41,17 +41,17 @@ bool Cache::access(uint64_t address, CacheOperation readWrite) {
         }
     }
 
-    if (hitLineIndex >= 0) {
-        // Cache hit: update LRU
+    // Hit, update LRU
+    if (hitLineIndex >= 0) {  
         hits++;
         set[hitLineIndex].lruTimestamp = ++lruClock;
         return true;
     }
 
-    // 2) Miss path: write-allocate on writes as well (per spec)
+    //Miss path
     misses++;
 
-    // Choose a victim: prefer an invalid line first
+    // Choose a victim
     int victimIndex = -1;
     for (int way = 0; way < static_cast<int>(config.ways); ++way) {
         if (!set[way].isValid) {
@@ -59,7 +59,7 @@ bool Cache::access(uint64_t address, CacheOperation readWrite) {
             break;
         }
     }
-    // If all valid, evict true LRU (smallest lruTimestamp)
+    // If all valid, evict true LRU
     if (victimIndex < 0) {
         uint64_t minTimestamp = set[0].lruTimestamp;
         victimIndex = 0;
@@ -71,13 +71,12 @@ bool Cache::access(uint64_t address, CacheOperation readWrite) {
         }
     }
 
-    // Fill the line (no data tracking needed per spec)
+    // Fill the line 
     set[victimIndex].isValid = true;
     set[victimIndex].tag = tag;
     set[victimIndex].lruTimestamp = ++lruClock;
 
-    // Miss is reported as false to allow caller to model miss latency
-    (void)readWrite; // write-through semantics don't affect cache contents for timing here
+    (void)readWrite; 
     return false;
 }
 

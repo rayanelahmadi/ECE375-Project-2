@@ -47,15 +47,17 @@ Simulator::Instruction Simulator::simDecode(Instruction inst) {
     inst.rs2    = extractBits(inst.instruction, 24, 20);
     inst.funct7 = extractBits(inst.instruction, 31, 25);
 
-    inst.isLegal = true; // assume legal unless proven otherwise
+    inst.isLegal = true;
 
+    // Halt instruction
     if (inst.instruction == 0xfeedfeed) {
         inst.isHalt = true;
-        return inst; // halt instruction
+        return inst; 
     }
+    // NOP instruction
     if (inst.instruction == 0x00000013) {
         inst.isNop = true;
-        return inst; // NOP instruction
+        return inst; 
     }
 
     switch (inst.opcode) {
@@ -479,7 +481,6 @@ Simulator::Instruction Simulator::simWB(Simulator::Instruction inst) {
     }
     return inst;
 }
-
 
 // Simulate the whole instruction using functions above
 Simulator::Instruction Simulator::simInstruction(uint64_t PC) {

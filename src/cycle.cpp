@@ -20,7 +20,6 @@ static uint64_t PC = 0;
  * A basic template is provided below that doesn't account for any hazards.
  */
 
-
 Simulator::Instruction doneInst;
 
 Simulator::Instruction nop(StageStatus status) {
@@ -82,25 +81,21 @@ Status runCycles(uint64_t cycles) {
         bool flush = false;
         bool branchStall = false;
 
-        // Check load-use stalls (no need to stall if the destination register is x0)
-
-
+        // Check load-use stalls
         if (EX.readsMem && EX.rd != 0) {
             if (EX.rd == ID.rs1 || EX.rd == ID.rs2) {
             stall = true;
             }
         }
 
-
-        // Check arithmetic-branch stall (including load)
+        // Check arithmetic-branch stall
         if (EX.writesRd && (ID.opcode == OP_BRANCH || ID.opcode == OP_JALR) && EX.rd != 0) {
             if (ID.rs1 == EX.rd || ID.rs2 == EX.rd) {
                 stall = true;
             }
         }
 
-
-        // load-branch stall number 2 maybe?
+        // load-branch stall number 2
         if (pipelineInfo.memInst.readsMem && pipelineInfo.memInst.writesRd && (ID.opcode == OP_BRANCH || ID.opcode == OP_JALR) && pipelineInfo.memInst.rd != 0) {
             if (pipelineInfo.memInst.rd == ID.rs1 || pipelineInfo.memInst.rd == ID.rs2) {
             stall = true;
@@ -116,16 +111,13 @@ Status runCycles(uint64_t cycles) {
         }
 
         // TAKE CARE OF MEM
-
         // Need to do some forwarding stuff here I think
-
         // Do a WB to MEM forward to give load to a store (load-store forwarding)
         if (pipelineInfo.exInst.writesMem && pipelineInfo.wbInst.rd != 0 && pipelineInfo.wbInst.readsMem) {
             if (pipelineInfo.exInst.rs2 == pipelineInfo.wbInst.rd) {
                 pipelineInfo.exInst.op2Val = pipelineInfo.wbInst.memResult;
             }
         }
-
 
         pipelineInfo.memInst = simulator->simMEM(pipelineInfo.exInst);
         if (pipelineInfo.memInst.isHalt || pipelineInfo.memInst.isNop) {
@@ -140,7 +132,6 @@ Status runCycles(uint64_t cycles) {
             pipelineInfo.exInst = nop(BUBBLE);
         } else {
             // Take care of forwarding to the stage about to run EX
-
             // Register Source 1
             if (hazard(pipelineInfo.memInst, pipelineInfo.idInst.rs1)) {
                 if (pipelineInfo.memInst.readsMem) {
@@ -161,7 +152,6 @@ Status runCycles(uint64_t cycles) {
                     pipelineInfo.idInst.op1Val = doneInst.arithResult;
                 }
             }
-
 
             // Register Source 2
             if (hazard(pipelineInfo.memInst, pipelineInfo.idInst.rs2)) {
@@ -184,9 +174,6 @@ Status runCycles(uint64_t cycles) {
                 }
             }
 
-
-
-
             pipelineInfo.exInst = simulator->simEX(pipelineInfo.idInst);
             if (pipelineInfo.exInst.isNop || pipelineInfo.exInst.isHalt) {
                 pipelineInfo.exInst.status = BUBBLE;
@@ -197,11 +184,9 @@ Status runCycles(uint64_t cycles) {
 
         // Take care of ID
         if (stall) {
-            // Don't put a bubble here (I think), just hold the instruction
-
+            // Don't put a bubble here, hold the instruction
         } else {
-            Simulator::Instruction newIDInst = simulator->simID(pipelineInfo.ifInst); // don't directly write to pipelineInfo.idInst yet
-
+            Simulator::Instruction newIDInst = simulator->simID(pipelineInfo.ifInst); 
             // Take care of branch forwarding
             // Need to make sure to delay if needed branch values are not ready yet
             if (newIDInst.opcode == OP_BRANCH || newIDInst.opcode == OP_JALR) {
@@ -268,7 +253,6 @@ Status runCycles(uint64_t cycles) {
                 } else {
                     pipelineInfo.idInst.status = NORMAL;
                 }
-
                  if (pipelineInfo.idInst.nextPC != pipelineInfo.ifInst.PC + 4) {
                     flush = true;
                     PC = pipelineInfo.idInst.nextPC;
@@ -280,19 +264,15 @@ Status runCycles(uint64_t cycles) {
 
         // Take care of IF
         if (stall || branchStall) {
-            // Do nothing, hold instruction in IF
-
+            // Hold instruction in IF
         } else if (flush) {
-
             pipelineInfo.ifInst = nop(BUBBLE);
-
         } else {
             pipelineInfo.ifInst = simulator->simIF(PC);
             pipelineInfo.ifInst.status = NORMAL;
             PC = PC + 4;
         }
         doneInst = pipelineInfo.wbInst;
-
         if (status == HALT) {
             break;
         }
@@ -313,8 +293,7 @@ Status runCycles(uint64_t cycles) {
     return status;
 }
 
-// run till halt (call runCycles() with cycles == 1 each time) until
-// status tells you to HALT or ERROR out
+// run till halt
 Status runTillHalt() {
     Status status;
     while (true) {
@@ -332,7 +311,6 @@ Status finalizeSimulator() {
     uint64_t icMisses = iCache ? iCache->getMisses() : 0;
     uint64_t dcHits = dCache ? dCache->getHits() : 0;
     uint64_t dcMisses = dCache ? dCache->getMisses() : 0;
-    // loadUseStalls remains to be tracked in pipeline timing; keep as 0 for now
     SimulationStats stats{simulator->getDin(),  cycleCount, icHits, icMisses, dcHits, dcMisses, 0};
     dumpSimStats(stats, output);
     return SUCCESS;
