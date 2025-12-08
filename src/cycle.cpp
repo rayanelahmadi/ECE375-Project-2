@@ -161,7 +161,7 @@ Status runCycles(uint64_t cycles) {
                     pipelineInfo.idInst.op1Val = doneInst.arithResult;
                 }
             }
-            
+
 
             // Register Source 2
             if (hazard(pipelineInfo.memInst, pipelineInfo.idInst.rs2)) {
@@ -202,7 +202,7 @@ Status runCycles(uint64_t cycles) {
         } else {
             Simulator::Instruction newIDInst = simulator->simID(pipelineInfo.ifInst); // don't directly write to pipelineInfo.idInst yet
 
-            // Take care of branch forwarding 
+            // Take care of branch forwarding
             // Need to make sure to delay if needed branch values are not ready yet
             if (newIDInst.opcode == OP_BRANCH || newIDInst.opcode == OP_JALR) {
                 if (hazard(pipelineInfo.exInst, newIDInst.rs1) || hazard(pipelineInfo.exInst, newIDInst.rs2)) {
@@ -292,7 +292,7 @@ Status runCycles(uint64_t cycles) {
             PC = PC + 4;
         }
         doneInst = pipelineInfo.wbInst;
-        
+
         if (status == HALT) {
             break;
         }
@@ -327,7 +327,13 @@ Status runTillHalt() {
 // dump the state of the simulator
 Status finalizeSimulator() {
     simulator->dumpRegMem(output);
-    SimulationStats stats{simulator->getDin(),  cycleCount, 0, 0, 0, 0, 0};  // TODO incomplete implementation
+    // Populate cache hit/miss statistics from the I/D caches
+    uint64_t icHits = iCache ? iCache->getHits() : 0;
+    uint64_t icMisses = iCache ? iCache->getMisses() : 0;
+    uint64_t dcHits = dCache ? dCache->getHits() : 0;
+    uint64_t dcMisses = dCache ? dCache->getMisses() : 0;
+    // loadUseStalls remains to be tracked in pipeline timing; keep as 0 for now
+    SimulationStats stats{simulator->getDin(),  cycleCount, icHits, icMisses, dcHits, dcMisses, 0};
     dumpSimStats(stats, output);
     return SUCCESS;
 }
