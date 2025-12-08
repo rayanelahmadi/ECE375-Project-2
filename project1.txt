@@ -1,0 +1,292 @@
+COS/ECE 375
+Fall 2025
+Project 1: RISC-V ISA Functional Simulation.
+You must work in groups of two people. All members must contribute. All members are
+responsible for the result. Submit via Canvas.
+Introduction
+The purpose of the lab component of the class is to give you hands-on experience with
+designing microprocessors and microprocessor-based systems. Please read this document
+in its entirety before attempting the assignment.
+Much architecture research is performed using simulators in order to assess functionality.
+Your work in Project 1 will be to create such a simulator for the main functionality of the
+RISC-V Instruction Set Architecture (ISA) as documented in the provided green sheet. The
+simulator is to be written in C++. We provide components that use C++ features (details
+later), but you can write in C-style.
+Your task in this first project assignment is to write a C++ language program which will read
+a binary machine code file (i.e. an executable file), interpret the bits in that file as
+instructions for the RISC-V instruction set, and simulate the execution of those instructions.
+Such a program is called a functional simulator. You are effectively emulating a RISC-V
+processor by performing the fetch, decode, execute instruction processing steps you learned
+about in class. Later in the semester, you will implement a cycle-accurate simulator that
+builds upon this functional simulator, to assess the performance of a 5-stage pipelined RISC-
+V CPU.
+Overview
+The basic idea of this simulator is to repeatedly execute a loop in which instructions are
+fetched (read from a simulated memory), decoded, and executed. You will be reading
+instructions that are encoded using the RISC-V bit encodings as documented in the provided
+green sheet.
+The simulator should support a subset of the RV64I base set of instructions: those inside the
+red boxes of the provided green sheet. The simulator does not need to support the csr,
+fence, or environment instructions. Your simulator should support any program comprised
+of the supported instructions. You may assume that the test programs used for grading
+contain only supported instructions and do not trigger exceptions.
+The RISC-V ISA does not contain a HALT instruction, so we use the code 0xfeedfeed to
+signify the end of the code section of a program. When the pseudo-halt instruction
+0xfeedfeed is read by the simulator, it must dump the register and memory state before
+exiting. (The provided template does this already. In case you need to modify it, always use
+the provided dump function to dump register and memory state. It enforces correct
+formatting.)
+We suggest that you start your work by closely examining the provided template first. In the
+template, we provide an implementation of the ADDI instruction. You can then implement
+1
+easier instructions first, gradually adding more challenging instructions. As you add
+instructions, write test cases (in RISC-V assembly) for those instructions. We have provided
+an initial test case, but you should certainly write more. You are encouraged to write and
+share test cases. When using other people’s test cases, acknowledge the authors. You will
+need to submit all test cases you used to test your simulator. The test cases will not be
+graded. But at least some test cases should be ones you created yourself, and they should
+have unique coverage that go beyond those you obtained from others.
+Functional Steps of Instruction Simulation
+In the provided template (src/sim.h), you will find that the simulation is broken down into
+steps. Each step is defined as its own function, and together they create and maintain an
+instruction data structure (`struct Instruction` in the template). In this way, instructions are
+simulated in a fine-grained manner for better understanding and future code reuse. You are
+expected to complete the functions defined in the template. There is no strict requirement
+on what each step should do, but here are some suggestions:
+Fetch – Given PC, read instruction binary from the memory.
+Decode – Decode opcode, source and destination registers of the instruction, determine if it
+needs to read/write register file, read/write memory, and/or perform arithmetic/logic
+operation.
+OpCollection – Collect operands from the register file.
+NextPCResolution – Resolve next PC, whether the next instruction or jump/branch target.
+ArithLogic – Perform arithmetic or logic operations.
+AddrGen – Generate memory load/store address.
+MemAccess – Access memory.
+Commit – Writes value back to the register file.
+Once again, what each step should do are only suggestions. We don’t expect everyone to
+agree on the same semantical boundaries between these functions. We don’t grade these
+functions individually.
+Provided Documents
+To assist you in understanding the RISC-V instructions, we provide the following
+documents:
+riscv_greensheet.pdf
+riscv_orangesheet.txt
+riscv_manual.pdf
+Below is a short description of each of the above documents.
+riscv_greensheet.pdf – The primary source of reference for the RISC-V instructions,
+annotated with the subset to implement. (It is taken from the 1st edition of the textbook,
+which is more complete than the one in the 2nd edition.) Note that the instruction
+descriptions in the green sheet are written from a hardware perspective, not C++. See the
+orange sheet that follows.
+2
+riscv_orangesheet.txt – More detailed explanations for each instruction to implement. This
+document is meant to emphasize important details more clearly than the green sheet. It
+covers all the instructions to be implemented as annotated in the green sheet.
+riscv_manual.pdf – The official RISC-V ISA manual (version 20250508). Refer to Chapter 2
+and 4 for relevant information about RV32I and how RV64I is built upon RV32I.
+When implementing the simulator, pay attention to the encoding of each instruction format,
+especially the ordering of the immediate field bits. Pay attention to rules concerning:
+Sign-extension;
+Signed vs. unsigned;
+Bit-width (byte, half, word, double);
+Bits to consider or discard in jalr and shift instructions.
+Bit manipulation is discussed in Chapter 20: Low-Level Programming of the COS 217
+textbook C Programming A Modern Approach.
+Provided Files
+To allow you to concentrate on building the core of the simulator, we provide you with a
+number of files containing abstractions, utilities, and a simulator template. These files are
+contained in the project tarball on Canvas. Use
+tar xvf project1.tar.gz
+to decompress the tarball. The following is a list of the relevant files ordered by directory
+structure. >
+_
+< indicates the files you will need to modify and submit.
+>Partners.md<
+Makefile
+bin/
+src/
+test/
+riscv64-elf-as
+riscv64-elf-objcopy
+riscv64-elf-objdump
+>sim.cpp<
+>sim.h<
+MemoryStore.h
+RegisterInfo.h
+UtilityFunctions.o
+fib.s
+fib.mem_state.out
+fib.reg_state.out
+add.s
+(>any additional tests you used<)
+Below is a short description of each of the above files.
+3
+riscv64-elf-as – RISC-V assembler. Converts RISC-V text assembly to binary ELF files.
+riscv64-elf-objcopy – RISC-V object file copier/translator. Used to convert ELF files to flat
+binary files that are read by your simulator.
+riscv64-elf-objdump – RISC-V object file disassembler. Used to inspect the instructions in a
+binary ELF file.
+>sim.cpp< – [Modify this file] C++ file with the skeleton implementation of the simulator.
+We give an example implementation for the ADDI operation. This template is prepared to
+compile out of the box and function correctly for the minimum add.s test case. You are
+expected to use the template.
+>sim.h< – [Modify this file] C++ header with function signatures and constants. Feel free to
+add more functions and more fields to structs and enums. But do not modify existing
+function signatures.
+MemoryStore.h – The interface to the memory abstraction.
+RegisterInfo.h – Signature of the register file dump function and definition of the
+RegisterInfo struct passed to it as an argument. It also defines an instruction disassembly
+function you may find useful when debugging. However, your simulator must not rely on
+this disassembler.
+UtilityFunctions.o – A binary file containing the implementations of the memory
+abstraction and other utility functions. This file is not intended to be human-readable.
+fib.s – An example RISC-V assembly test program.
+fib.mem_state.out – The memory state dump of running the compiled version of fib.s.
+fib.reg_state.out – The register state dump of running the compiled version of fib.s.
+add.s – A minimum test case covering ADDI already implemented in the template.
+(>any additional tests you used<) – You will need to add more tests and submit them.
+Makefile – Build rules for the executables and assembly test cases.
+>Partners.md< - [Modify this file] A markdown file that needs to be filled out and turned in
+along with the necessary source files.
+Test case structure
+Test cases for this project are RISC-V assembly files consisting entirely of a single .text
+section. Any data values that must have specific values for the program to work must be
+manually listed at the end of the file (after 0xfeedfeed) using .word directives. For example,
+consider the following assembly program:
+li t1, 20
+4
+li t2, 24
+lw t3, 0(t1)
+sw t3, 0(t2)
+.word 0xfeedfeed
+.word 0xac
+.word 0xdb
+li is a pseudo instruction. Pseudo instructions expand to their corresponding real
+instructions as explained in the green sheet. For example, the 4 instructions in the above
+program, when assembled and disassembled, will be shown as:
+addi t1,zero,20
+addi t2,zero,24
+lw t3, 0(t1)
+sw t3, 0(t2)
+(li is implemented with addi to the zero register here.) When using pseudo-instructions in
+your test case, double check that they expand to an implemented instruction. Each
+instruction in the above program is 32 bits = 4 bytes. Thus, the last instruction is located at
+bytes 12-15.
+A “.word” directive fills the corresponding location in the binary file with the raw data
+provided to the directive. For instance, the .word directive for 0xfeedfeed is at address 16 =
+0x10, so the directive causes bytes 16-19 to get filled with 0xfeedfeed. Likewise, bytes 20-23
+are filled with 0xac, and bytes 24-27 are filled with 0xdb.
+Thus, when the third instruction reads from address 20, it will read the value 0xac (since no
+other instruction has written to it beforehand). Likewise, when the fourth instruction stores
+to address 24, it will overwrite the value of 0xdb. Note that it is quite possible for a program
+to access memory locations in its execution other than those locations initialized by .word
+directives.
+Compilation
+You can use the provided Makefile to compile tests and your simulator. To compile tests,
+navigate to the main directory (where Makefile is), and run:
+make tests
+Under the hood, to compile test cases, make uses a combination of riscv64-elf-as and
+riscv64-elf-objcopy. For example, to compile the example test case, it runs the following
+commands:
+bin/riscv64-elf-as test/fib.s -o test/fib.elf
+bin/riscv64-elf-objcopy test/fib.elf -j .text -O binary
+test/fib.bin
+5
+The first command assembles the text assembly file into a binary ELF file. This ELF file then
+needs to be translated into a flat binary file that only contains the code and any .word
+directives you may have added. This is done by calling riscv64-elf-objcopy on the .text
+section of the ELF file as shown in the second command. The fib.bin file created by the
+second command should be the input to your simulator.
+To inspect the code in an ELF file, you can use the riscv64-elf-objdump utility. For example,
+running the following command
+bin/riscv64-elf-objdump -D -j .text -M no-aliases test/fib.elf
+disassembles the .text section of the ELF file, allowing you to see the instructions in it. The -
+M no-aliases directive tells the objdump utility not to interpret instructions back to
+their pseudo instructions, if needed. If you want to examine the contents of your flat binary
+file, you can use hexdump. For instance, running
+hexdump -e '"%08_ax :" 1/4 "%08x " "\n"' test/fib.bin
+will print out the contents of the binary file fib.bin in 4-byte chunks with offsets on the left,
+as shown below:
+00000000 :03c00293
+00000004 :06c00f13
+00000008 :000f2f03
+0000000c :00100393
+…
+To compile your simulator, navigate to the main directory (where Makefile is), and run:
+make sim
+Make links your code with the implementation of the memory abstraction and utility
+functions provided in UtilityFunctions.o.
+Memory Abstraction
+We provide a memory abstraction for the ISA simulator you are to implement for Project 1
+so that you do not need to implement memory on your own. You must use this abstraction
+to model memory in your simulator.
+The memory abstraction is 64 KB (0x10000 bytes) large. It has three main functions
+(getMemValue, setMemValue, printMemory). Each of these functions returns 0 on success
+and a nonzero value on failure (an error message is also printed on failure).
+The getMemValue and setMemValue functions take in a memory address, value, and size
+(which can be byte size (8 bits), half word size (16 bits), word size (32 bits), or double word
+size (64 bits)). The getMemValue function returns a value from memory by reference
+through its "value" parameter, since the function's return value is the status of the operation
+(0 on success and nonzero on failure, as mentioned above). The printMemory function takes
+6
+in a start and end address and prints the values of memory from the start address to the end
+address in 32-bit (4 byte) chunks, with five such chunks (20 bytes) per line. For example,
+the following three lines of printMemory(..) output each show the value of 20 bytes of
+memory, starting from addresses 0x0, 0x14, and 0x28 respectively.
+0x00000000: 0x00000000 0x00000000 0x00000000 0x00000000 0xff000000
+0x00000014: 0x00000000 0x0000c000 0x00000000 0x00000000 0x00000000
+0x00000028: 0x00000000 0x00000000 0x00000000 0x0a000000 0x00000000
+If the address range to print is not strictly divisible by 32, the value of a few bytes beyond
+the end address will also be printed at the end of the output.
+Computers
+We have tested the files for this project on the Nobel cluster at Princeton OIT. That is where
+we recommend that you work on the project. If you choose to try to do this elsewhere (e.g.,
+your own computer) then it is your responsibility to ensure that it will work on Nobel when
+we grade your submission after you hand it in. TAs in office hours cannot devote time to
+debugging code that is not on Nobel. For access to Nobel start with this link:
+https://researchcomputing.princeton.edu/systems-and-services/available-systems/nobel
+What to Hand in
+Please use Canvas to turn in your modified sim.h, sim.cpp, Partners.md, and any additional
+test cases you used to test your simulator. You should place all these files in a folder named
+netid1_netid2. Place test cases in netid1_netid2/test. Zip the folder and submit the .zip file.
+You can zip the folder using:
+zip -r netid1_netid2.zip netid1_netid2
+Your simulator must compile properly on the Nobel cluster using the provided Makefile.
+If we cannot compile your source file, we cannot grade your assignment and you will have
+to resubmit; the delay will be taken as late days.
+Grading
+Grading will consist mainly of running test RISC-V binaries (including but not limited to any
+sample binaries we give you) through your simulator. These test binaries will thoroughly
+test the operation of instructions. Particular attention will be paid to “corner cases”. Your
+submitted tests will not be graded.
+A Note on Endianness:
+Endianness refers to the order in which bytes are stored in memory with respect to reading
+and writing multiple-byte words from memory. Big-endian processors use the leftmost or
+“big end” byte as the word address, while little-endian processors use the rightmost or
+7
+“little end” byte as the word address. Thus, for example, if storing the value 0xAABBCCDD at
+address 0, big-endian and little-endian processors would store the value as shown in the
+following table:
+Address Big-endian Little-endian
+0x0 0xAA 0xDD
+0x1 0xBB 0xCC
+0x2 0xCC 0xBB
+0x3 0xDD 0xAA
+RISC-V supports both endianness but is commonly implemented as a little-endian
+architecture. We follow this convention. X86 processors (such as the ones on the Nobel
+cluster) are also little-endian. We do not expect endianness issues when simulating a little-
+endian architecture on little-endian machines.
+You do not need to worry about endianness when reading data from or writing data to the
+memory abstraction. Any endianness issues that arise with the memory abstraction are
+handled internally by the provided code. That is, the memory abstraction will properly store
+and retrieve multi-byte data respecting the endianness (little-endian in this case). You don’t
+need to be explicitly concerned with endianness if working with the provided template,
+except when inspecting memory dumps.
+Another Note on Integer Types
+As in the provided template, we recommend you use the types for unsigned integers defined
+in inttypes.h (such as uint64_t, uint32_t, uint16_t, etc.) to represent quantities to avoid some
+issues related to overflow and sign extension. The types in inttypes.h describe both the type
+and size of the integer in question, which is very useful when dealing with code that
+requires bit manipulation. For example, uint64_t is an unsigned 64-bit integer, and uint32_t
+is an unsigned 32-bit integer.
+8

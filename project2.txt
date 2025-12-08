@@ -39,215 +39,125 @@ you obtained from others. You may find it helpful to write test cases and compar
 output from the functional simulator to that from your cycle-accurate simulator. Remember
 – your cycle-accurate simulator should generate results identical to a correct functional
 simulator. However, this is the starting point. The timing must also be calculated correctly.
-
 1
-
-Simulation Requirements
+Simulation Requirements
 Your simulator must accurately model the timing of the following:
-Full forwarding and stalls
-•• Full
-This includes
-includes forwarding
-forwardingfrom
-fromaa load
-load to
-to the
-the data input
-input of a store (i.e.,
-o This
-register rt) without a stall cycle in between (in other words, aa WB->MEM
-WB->MEM
-forward
+• Full forwarding and stalls
+• Full forwarding and stalls
+o This includes forwarding from a load to the data input of a store (i.e.,
+o This includes forwarding from a load to the data input of a store (i.e.,
+register rt) without a stall cycle in between (in other words, a WB->MEM
+register rt) without a stall cycle in between (in other words, a WB->MEM
 forward from the load to the store). See lecture slides or page 313 in the
-textbook for an overview of such forwarding. All
-All other cases of forwarding
-to a store should forward when the store is in
-in the EX
-EX stage.
-stage.
-o Forwarding
-Forwarding to
-to ID
-ID for
-for the
-the execution
-execution of
-of branches. You may need to add stall
-cycles between the forwarding instruction
-instruction and
-and the branch in ID for the
-forwarding to work;
-work; see
-see page 326 in the text for further details.
-simulator should
-should implement
-implement the following
-following stalls:
-stalls: one-cycle
-one-cycle load-use
-load-use
-o Your simulator
-stall, one-cycle
-stall, two-cycle
-two-cycle load-branch
-load-branch stall.
-stall. A stall
-one-cycle arithmetic-branch
-arithmetic-branch stall,
-injects a bubble
-bubble (nop)
-(nop) to hold the blocked instruction in place while allowing
-all previous instructions
-instructions to flow
-flow down
-down the pipeline.
-the zero
-zero register shouldn’t cause a stall
-o Note that dependencies on the
-Recall that control transfer
-•• An always-not-taken branch prediction policy. Recall
-instructions
-are
-resolved
-in
-the
-ID
-stage.
-Before
-the target address is calculated
-instructions are resolved in the ID stage.
-and/or resolved,
-and/or
-resolved, in
-in the
-the IF
-IFstage,
-stage, fetch the next instruction at PC + 4. You must
-properly squash
-properly
-squash this speculative
-speculative instruction
-instruction once
-once the
-the target address is resolved to
-(it should
-be different from PC + 4 (it
-should never
-never enter ID stage).
+forward from the load to the store). See lecture slides or page 313 in the
+textbook for an overview of such forwarding. All other cases of forwarding
+textbook for an overview of such forwarding. All other cases of forwarding
+to a store should forward when the store is in the EX stage.
+to a store should forward when the store is in the EX stage.
+o Forwarding to ID for the execution of branches. You may need to add stall
+o Forwarding to ID for the execution of branches. You may need to add stall
+cycles between the forwarding instruction and the branch in ID for the
+cycles between the forwarding instruction and the branch in ID for the
+forwarding to work; see page 326 in the text for further details.
+forwarding to work; see page 326 in the text for further details.
+o Your simulator should implement the following stalls: one-cycle load-use
+o Your simulator should implement the following stalls: one-cycle load-use
+stall, one-cycle arithmetic-branch stall, two-cycle load-branch stall. A stall
+stall, one-cycle arithmetic-branch stall, two-cycle load-branch stall. A stall
+injects a bubble (nop) to hold the blocked instruction in place while allowing
+injects a bubble (nop) to hold the blocked instruction in place while allowing
+all previous instructions to flow down the pipeline.
+all previous instructions to flow down the pipeline.
+o Note that dependencies on the zero register shouldn’t cause a stall
+o Note that dependencies on the zero register shouldn’t cause a stall
+• An always-not-taken branch prediction policy. Recall that control transfer
+• An always-not-taken branch prediction policy. Recall that control transfer
+instructions are resolved in the ID stage. Before the target address is calculated
+instructions are resolved in the ID stage. Before the target address is calculated
+and/or resolved, in the IF stage, fetch the next instruction at PC + 4. You must
+and/or resolved, in the IF stage, fetch the next instruction at PC + 4. You must
+properly squash this speculative instruction once the target address is resolved to
+properly squash this speculative instruction once the target address is resolved to
+be different from PC + 4 (it should never enter ID stage).
+be different from PC + 4 (it should never enter ID stage).
 o If you are bored after completing all the requirements, you can implement
-some more advanced
-advanced branch
-branch prediction
-prediction policies
-policies and write about your
+o If you are bored after completing all the requirements, you can implement
+some more advanced branch prediction policies and write about your
+some more advanced branch prediction policies and write about your
+findings in Partners.md. But your submission by default should still conform
 findings in Partners.md. But your submission by default should still conform
 to always-not-taken.
-•• Cache hits and misses (details provided
-provided in
-in the
-the “Caches
-“Caches and
-and Cache Configuration
+to always-not-taken.
+• Cache hits and misses (details provided in the “Caches and Cache Configuration
+• Cache hits and misses (details provided in the “Caches and Cache Configuration
 Section)
-•• Exceptions (details provided in the “Exceptions” section)
-•• 0xfeedfeed
-HALT instruction.
-RISC-V ISA
-ISA does
-does not contain a HALT
-instruction. So,
-So, as in Project 1, we
-o The RISC-V
+Section)
+• Exceptions (details provided in the “Exceptions” section)
+• Exceptions (details provided in the “Exceptions” section)
+• 0xfeedfeed
+• 0xfeedfeed
+o The RISC-V ISA does not contain a HALT instruction. So, as in Project 1, we
+o The RISC-V ISA does not contain a HALT instruction. So, as in Project 1, we
 use the code 0xfeedfeed to signify the end of the code section of a program.
-You should halt execution when
-when the
-the 0xfeedfeed has completed its WB
-WB stage.
-stage.
+use the code 0xfeedfeed to signify the end of the code section of a program.
+You should halt execution when the 0xfeedfeed has completed its WB stage.
+You should halt execution when the 0xfeedfeed has completed its WB stage.
 Other requirements:
-correct status
-status of
-of a pipeline
-pipeline stage
-stage (bubble, speculative,
-speculative, squashed, etc.),
-•• Must track the correct
-refer to the provided pipeline
-pipeline state
-state format.
-simulator must
-must be
-be capable of running for a specified number of cycles and
-•• Your simulator
-that point
-point (details
-(details provided in the
-providing statistics
-statistics about
-about the execution to that
+• Must track the correct status of a pipeline stage (bubble, speculative, squashed, etc.),
+• Must track the correct status of a pipeline stage (bubble, speculative, squashed, etc.),
+refer to the provided pipeline state format.
+refer to the provided pipeline state format.
+• Your simulator must be capable of running for a specified number of cycles and
+• Your simulator must be capable of running for a specified number of cycles and
+providing statistics about the execution to that point (details provided in the
+providing statistics about the execution to that point (details provided in the
 “Simulation Statistics” section)
-•• The final architectural state (registers and memory) of your cycle-accurate
-simulator for a given program must match those of
-of aa correct
-correct functional
-functional simulator
+“Simulation Statistics” section)
+• The final architectural state (registers and memory) of your cycle-accurate
+• The final architectural state (registers and memory) of your cycle-accurate
+simulator for a given program must match those of a correct functional simulator
+simulator for a given program must match those of a correct functional simulator
 from Project 1.
-
+from Project 1.
 2
-
-TODO
+TODO
 To provide you with a starting point for your cycle-accurate simulator, use the template
 provided. You should explore the code provided and understand how it all ties together.
 Refer to the “Provided Files” section for more information on the files.
 A suggested roadmap of how you can tackle this project is:
-simulation (simulator.cpp,
-(simulator.cpp, simulator.h): We provide functional
-•• Pipeline stage simulation
+• Pipeline stage simulation (simulator.cpp, simulator.h): We provide functional
+• Pipeline stage simulation (simulator.cpp, simulator.h): We provide functional
 simulation functions (e.g. simFetch, simAddrGen, etc.) in simulator.cpp. They are
-solutions to project 1’s
-1’s functional
-functional simulator.
-simulator. To
-To simulate
-simulate pipeline
-pipelinestages,
-stages, complete
-simulation functions (e.g.
-(e.g. simIF,
-simIF, simMEM, etc.) by calling the
-the pipeline stage simulation
+simulation functions (e.g. simFetch, simAddrGen, etc.) in simulator.cpp. They are
+solutions to project 1’s functional simulator. To simulate pipeline stages, complete
+solutions to project 1’s functional simulator. To simulate pipeline stages, complete
+the pipeline stage simulation functions (e.g. simIF, simMEM, etc.) by calling the
+the pipeline stage simulation functions (e.g. simIF, simMEM, etc.) by calling the
 functional simulation functions.
-(cycle.cpp): Once
-Once you have all simulation
-•• Stalls and forwarding in the pipeline (cycle.cpp):
+functional simulation functions.
+• Stalls and forwarding in the pipeline (cycle.cpp): Once you have all simulation
+• Stalls and forwarding in the pipeline (cycle.cpp): Once you have all simulation
 functions ready from simulator.cpp, you can modify runCycles in cycle.cpp to model
-pipeline behavior like
-like stall
-stall and
-and forwarding.
-rather standalone
-standalone portion
-portion of the
-•• Cache behavior (cache.cpp, cache.h): This isis aa rather
-Cache Configuration”
-Configuration” Section for more
-assignment. Refer to the “Caches and Cache
+functions ready from simulator.cpp, you can modify runCycles in cycle.cpp to model
+pipeline behavior like stall and forwarding.
+pipeline behavior like stall and forwarding.
+• Cache behavior (cache.cpp, cache.h): This is a rather standalone portion of the
+• Cache behavior (cache.cpp, cache.h): This is a rather standalone portion of the
+assignment. Refer to the “Caches and Cache Configuration” Section for more
+assignment. Refer to the “Caches and Cache Configuration” Section for more
 information.
-(cycle.cpp): Put
-Put together
-together cache and pipeline simulations.
-•• Timing of cache misses (cycle.cpp):
-(simulator.cpp, simulator.h, cycle.cpp): Add detection of
-•• Handling of exceptions (simulator.cpp,
+information.
+• Timing of cache misses (cycle.cpp): Put together cache and pipeline simulations.
+• Timing of cache misses (cycle.cpp): Put together cache and pipeline simulations.
+• Handling of exceptions (simulator.cpp, simulator.h, cycle.cpp): Add detection of
+• Handling of exceptions (simulator.cpp, simulator.h, cycle.cpp): Add detection of
+exception to simulator.cpp and correctly model timing in cycle.cpp. Refer to the
 exception to simulator.cpp and correctly model timing in cycle.cpp. Refer to the
 “Exceptions” section.
-“Exceptions”
-(cycle.cpp): Modify
-Modify finalizeSimulator
-finalizeSimulator in
-in cycle.cpp
-cycle.cpp to report
-•• Simulation statistics (cycle.cpp):
+“Exceptions” section.
+• Simulation statistics (cycle.cpp): Modify finalizeSimulator in cycle.cpp to report
+• Simulation statistics (cycle.cpp): Modify finalizeSimulator in cycle.cpp to report
+correct statistics. Refer to the “Simulation Statistics” section.
 correct statistics. Refer to the “Simulation Statistics” section.
 This roadmap is only a suggestion. You can split up various sections of the project amongst
 group members, but each member should contribute equally. Each group member should
@@ -257,9 +167,11 @@ set of teams for interviews about their code.
 Caches and Cache Configuration
 You must implement one level of I and D caches in your simulator. These caches must be
 capable of simulating the timing of a variety of cache configurations. They do not need to
-keep track of data in each cache line. The cache size, block size, ways (direct-mapped is a 1way cache), and latency of each cache is specified in a text configuration file. The caches
+keep track of data in each cache line. The cache size, block size, ways (direct-mapped is a 1-
+way cache), and latency of each cache is specified in a text configuration file. The caches
 must implement a true LRU replacement policy. Assume cache is write-allocate and stalls
-on misses (both read and write misses). No dirty bit is needed since the cache is writethrough and writes to memory are assumed to not impact timing. You may assume that the
+on misses (both read and write misses). No dirty bit is needed since the cache is write-
+through and writes to memory are assumed to not impact timing. You may assume that the
 block size will always be a power of 2 (in bytes), and that the cache size will always be a
 multiple of (block size * number of ways). You may assume that a single load/store
 instruction accesses only a single block. You are required to keep track of the hits and
@@ -268,10 +180,8 @@ must provide the final tally of hits and misses to the dumpSimStats(..) function
 SimulationStats struct.
 The fetch stage accesses the I cache, and the memory stage accesses the D cache. A hit
 completes within the fetch or memory stage. The additional latency of a cache miss (i.e., the
-
 3
-
-miss penalty) is given in the cache configuration file. A reasonable starting point for
+miss penalty) is given in the cache configuration file. A reasonable starting point for
 debugging would be to set the miss penalty to 5 cycles. As an example, if an instruction
 misses in the I cache, and the I cache miss penalty is 5 cycles, then that instruction should
 appear in the IF stage 6 times before proceeding to the ID stage.
@@ -289,33 +199,14 @@ The cache configuration text file contains eight lines each starting with one nu
 after the number is ignored. The first four lines specify the I cache parameters, and the
 second four lines specify the D cache parameters. These parameters are cache size in bytes,
 block size in bytes, number of ways, and miss latency. For example:
-2048
-16
-2
-5
-4096
-16
-4
-8
-
-#
-#
-#
-#
-#
-#
-#
-#
-
-2K Instruction Cache
-16 byte block size (I-Cache)
-2-way set associative (I-Cache)
-5 cycle miss penalty (I-Cache)
-4K Data Cache
-16 byte block size (D-Cache)
-4-way set associative (D-Cache)
-8 cycle miss penalty (D-Cache)
-
+2048 # 2K Instruction Cache
+16 # 16 byte block size (I-Cache)
+2 # 2-way set associative (I-Cache)
+5 # 5 cycle miss penalty (I-Cache)
+4096 # 4K Data Cache
+16 # 16 byte block size (D-Cache)
+4 # 4-way set associative (D-Cache)
+8 # 8 cycle miss penalty (D-Cache)
 Exceptions
 Your simulator must handle two types of exceptions: illegal instructions and memory
 exception. Exception raises a trap to transfer control to a handler in the operating system.
@@ -329,10 +220,8 @@ instruction exceptions, causing an infinite loop. To place meaningful instructio
 you can use the .org directive to place code at a specified address. To assemble an illegal
 instruction, you can pick one outside of our supported rv64i subset. To trigger a memory
 exception, you can access an address outside of the range of the memory.
-
 4
-
-When an exception occurs, you should NOT update state for the instruction triggering the
+When an exception occurs, you should NOT update state for the instruction triggering the
 exception. For instance, if an ADD triggers arithmetic overflow, you should not update the
 destination register. An illegal instruction should be detected in ID and squashed before it
 reaches EX. An instruction causing memory exception should be detected in MEM and
@@ -356,9 +245,7 @@ with these files. >_< indicates the files you will need to modify and submit.
 >Partners.md<
 Makefile
 bin/
-
 src/
-
 riscv64-elf-as
 riscv64-elf-objcopy
 riscv64-elf-objdump
@@ -376,18 +263,15 @@ sim_funct.cpp
 >cache.cpp<
 cycle.h
 >cycle.cpp<
-
 5
-
-test/
-
+test/
 sim_cycle.cpp
 fib.s
-fib_cycle_*.ref
+fib_cycle_
+*.ref
 illegal.s
 illegal_cycle_*.ref
 cache_config.txt
-
 riscv64-elf-as, riscv64-elf-objcopy, riscv64-elf-objdump, MemoryStore.{h,cpp},
 RegisterInfo.h – What you’ve already seen in project 1.
 Utilities.{h,cpp} – More utilities dealing with dumping state.
@@ -410,7 +294,8 @@ pipeline behavior with hazards, exceptions, and cache misses.
 sim_cycle.cpp – A main used for building a cycle accurate simulator. It calls functions in
 cycle.cpp.
 fib.s – A sample RISC-V assembly test program.
-fib_cycle_*.ref – The reference state dumps of running fib.s to completion using sim_cycle
+fib_cycle_*
+.ref – The reference state dumps of running fib.s to completion using sim_cycle
 with cache_config.txt. fib_cycle_*_ideal_cache.ref provides reference state dumps of
 running fib.s to completion using sim_cycle but with ideal cache. This is useful when you
 have not yet implemented a cache model.
@@ -418,10 +303,8 @@ illegal.s – A sample RISC-V test program with an illegal instruction.
 illegal_cycle_*.ref – The reference state dumps of running illegal.s to completion using
 sim_cycle with cache_config.txt. illegal_cycle_*_ideal_cache.ref provides those for an ideal
 cache.
-
 6
-
-Makefile – Build rules for the executables and assembly test cases. For more details on how
+Makefile – Build rules for the executables and assembly test cases. For more details on how
 to use make, refer to the project 1 description.
 >Partners.md< - [Modify this file] A markdown file that needs to be filled out and turned in
 along with the necessary source files.
@@ -454,17 +337,10 @@ Located in Utilities.{h,cpp}. You do not need to modify this function. The param
 provide the current pipeline information in the PipeState struct and start of the filename to
 use (i.e., the
 <basename>). The format of the output is similar to the example output below:
-
 7
-
-Cycle:
-51 || Inst at 0x38 (spcu)
-| blt zero, t1, -24
-| NOP (bubble)
-| addi t1, t1, -1
+Cycle: | NOP (bubble) (bubble) |
+51 || Inst at 0x38 (spcu) | addi t1, t1, -1 | blt zero, t1, -24
 | NOP
-(bubble)
-|
 The dumpPipeState function appends this output to the <basename>_cycle_ pipe_state.out
 file in the current working directory.
 All stages of the pipeline have instructions, but sometimes those instructions are
@@ -501,34 +377,21 @@ only be output at the end.
 As in initSimulator, the return value may be used for debugging your simulator.
 Status finalizeSimulator()
 Located in cycle.{h,cpp}. When called, finalizeSimluator does the following:
-
 8
-
-Calls dumpSimStats(..) with
-with number
-number of cycles simulated and other statistics in
+1. 1. 2. 2. 3. 3. Calls dumpSimStats(..) with number of cycles simulated and other statistics in
+Calls dumpSimStats(..) with number of cycles simulated and other statistics in
 the SimulationStats struct. The printSimStats function is provided.
-with an initialized RegisterInfo struct (as
-2. Calls dumpRegisterState with
-(as you
-you did
-did at the
-end of simulation
-simulation in
-in Project 1).
-3. Calls dumpMemoryState with MemoryStore representing main memory. As in
-Project 1, the dumpMemoryState function will
-willdump
-dump the
-the contents
-contents of
-of aa region of
-memory that
-that will
-will vary on a test-by-test basis.
-basis.
-1.
-
+the SimulationStats struct. The printSimStats function is provided.
+Calls dumpRegisterState with an initialized RegisterInfo struct (as you did at the
+Calls dumpRegisterState with an initialized RegisterInfo struct (as you did at the
+end of simulation in Project 1).
+end of simulation in Project 1).
+Calls dumpMemoryState with MemoryStore representing main memory. As in
+Calls dumpMemoryState with MemoryStore representing main memory. As in
+Project 1, the dumpMemoryState function will dump the contents of a region of
+Project 1, the dumpMemoryState function will dump the contents of a region of
+memory that will vary on a test-by-test basis.
+memory that will vary on a test-by-test basis.
 What to Submit
 Use Canvas to submit your modified cycle.cpp, simulator.h, simulator.cpp, cache.h,
 cache.cpp, Partners.md, and any test cases you used to test your simulator. You should place
@@ -557,7 +420,4 @@ penalized.
 Note:
 Please read the specifications more than once. It will save you a considerable amount of
 time.
-
 9
-
-
