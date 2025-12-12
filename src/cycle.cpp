@@ -21,6 +21,7 @@ static uint64_t iMissRemaining = 0;
 static bool iMissActive = false;  // True when waiting for I-cache miss to resolve
 static uint64_t dMissRemaining = 0;
 static bool dMissActive = false;
+static bool dMissIsLoad = false;  // True if D-cache miss is for a load (vs store)
 static Simulator::Instruction latchedMemInst;
 // Exception/flush handling - pending from previous cycle
 static bool pendingFlush = false;
@@ -61,7 +62,7 @@ Status initSimulator(CacheConfig& iCacheConfig, CacheConfig& dCacheConfig, Memor
     cycleCount = 0;
     PC = 0;
     iMissRemaining = dMissRemaining = 0;
-    iMissActive = dMissActive = false;
+    iMissActive = dMissActive = dMissIsLoad = false;
     pendingFlush = false;
     pendingFlushPC = 0;
     loadUseStallCount = committedDin = 0;
@@ -111,7 +112,10 @@ Status runCycles(uint64_t cycles) {
         bool stall = false;
         bool flush = false;  // Branch flush (immediate effect)
         bool branchStall = false;
+        // memStall is true if D-cache miss is active from a previous cycle
+        // newMissDetected is set during MEM stage if a new miss is detected this cycle
         bool memStall = dMissActive;
+        bool newMissDetected = false;
 
         // Check load-use stalls (no need to stall if the destination register is x0)
         bool loadUseStallTriggered = false;
@@ -145,26 +149,34 @@ Status runCycles(uint64_t cycles) {
         }
 
         // ==================== WB STAGE ====================
+        // During D-cache miss, WB gets bubbles (except first cycle when previous MEM flows through)
         Simulator::Instruction prevMEM = pipelineInfo.memInst;
-        pipelineInfo.wbInst = simulator->simWB(prevMEM);
-        
-        // Determine WB status based on what came from MEM
-        if (prevMEM.isNop && prevMEM.status == IDLE) {
-            pipelineInfo.wbInst = nop(IDLE);
-        } else if (prevMEM.isNop && prevMEM.status == SQUASHED) {
-            pipelineInfo.wbInst = nop(SQUASHED);
-        } else if (pipelineInfo.wbInst.isNop) {
-            pipelineInfo.wbInst.status = BUBBLE;
-        } else {
-            pipelineInfo.wbInst.status = NORMAL;
+
+        if (cycleCount >= 17 && cycleCount <= 22) {
+            std::cerr << "DEBUG WB cycle " << cycleCount << ": dMissActive=" << dMissActive << std::endl;
         }
-        
-        // Count committed instructions (includes HALT)
-        if (!pipelineInfo.wbInst.isNop && pipelineInfo.wbInst.isLegal) {
-            if (pipelineInfo.wbInst.PC != lastCommittedPC) {
-                committedDin++;
-                lastCommittedPC = pipelineInfo.wbInst.PC;
+        if (dMissActive) {
+            // D-cache miss in progress - WB gets a bubble
+            pipelineInfo.wbInst = nop(BUBBLE);
+        } else {
+            pipelineInfo.wbInst = simulator->simWB(prevMEM);
+
+            // Determine WB status based on what came from MEM
+            if (prevMEM.isNop && prevMEM.status == IDLE) {
+                pipelineInfo.wbInst = nop(IDLE);
+            } else if (prevMEM.isNop && prevMEM.status == SQUASHED) {
+                pipelineInfo.wbInst = nop(SQUASHED);
+            } else if (pipelineInfo.wbInst.isNop) {
+                pipelineInfo.wbInst.status = BUBBLE;
+            } else {
+                pipelineInfo.wbInst.status = NORMAL;
             }
+        }
+
+        // Count committed instructions (includes HALT)
+        // Count every instruction that commits in WB, including repeated executions in loops
+        if (!pipelineInfo.wbInst.isNop && pipelineInfo.wbInst.isLegal) {
+            committedDin++;
         }
         if (pipelineInfo.wbInst.isHalt) {
             status = HALT;
@@ -172,19 +184,30 @@ Status runCycles(uint64_t cycles) {
 
         // ==================== MEM STAGE with D-cache timing ====================
         Simulator::Instruction prevEX = pipelineInfo.exInst;
-        
+        bool dMissResolvingThisCycle = false;  // Track if miss resolves this cycle
+
         if (dMissActive) {
-            memStall = true;
+            // Don't modify memStall here - it's already set correctly at cycle start
+            if (cycleCount >= 10 && cycleCount <= 22) {
+                std::cerr << "DEBUG MEM cycle " << cycleCount << ": dMissRemaining before=" << dMissRemaining;
+            }
             if (dMissRemaining > 0) {
                 dMissRemaining--;
-                pipelineInfo.memInst = latchedMemInst;
-                pipelineInfo.memInst.status = NORMAL;
+            }
+            if (cycleCount >= 10 && cycleCount <= 22) {
+                std::cerr << " after=" << dMissRemaining << std::endl;
             }
             if (dMissRemaining == 0) {
+                // Miss resolved - execute the MEM operation
                 pipelineInfo.memInst = simulator->simMEM(latchedMemInst);
                 pipelineInfo.memInst.status = pipelineInfo.memInst.isNop ? BUBBLE : NORMAL;
                 dMissActive = false;
-                memStall = false;
+                dMissResolvingThisCycle = true;  // Mark that we resolved this cycle
+                // memStall remains true for this cycle; will be false next cycle
+            } else {
+                // Still waiting - show the latched instruction in MEM
+                pipelineInfo.memInst = latchedMemInst;
+                pipelineInfo.memInst.status = NORMAL;
             }
         } else {
             bool willAccessDCache = prevEX.readsMem || prevEX.writesMem;
@@ -194,11 +217,17 @@ Status runCycles(uint64_t cycles) {
                 if (!dHit) {
                     latchedMemInst = prevEX;
                     dMissRemaining = dCache->config.missLatency;
-                    if (dMissRemaining > 0) dMissRemaining--;
                     dMissActive = true;
+                    dMissIsLoad = prevEX.readsMem;  // Track if this is a load miss
                     pipelineInfo.memInst = latchedMemInst;
                     pipelineInfo.memInst.status = NORMAL;
-                    memStall = true;
+                    // Mark that a new miss was detected this cycle
+                    // On detection cycle: EX advances, ID gets bubble, IF stalls
+                    newMissDetected = true;
+                    if (cycleCount >= 10 && cycleCount <= 15) {
+                        std::cerr << "DEBUG: D-cache miss detected at cycle " << cycleCount
+                                  << " dMissRemaining=" << dMissRemaining << std::endl;
+                    }
                 } else {
                     pipelineInfo.memInst = simulator->simMEM(prevEX);
                     if (prevEX.isNop && prevEX.status == IDLE) {
@@ -226,6 +255,20 @@ Status runCycles(uint64_t cycles) {
             }
         }
 
+        // Update memStall based on post-MEM state.
+        // A miss detected this cycle should not stall younger stages until next cycle.
+        // When a miss resolves this cycle, we still need to stall (pipeline shows stalled state
+        // on the resolution cycle; normal flow resumes next cycle).
+        memStall = (dMissActive && !newMissDetected) || dMissResolvingThisCycle;
+
+        // Debug
+        if (cycleCount >= 17 && cycleCount <= 22) {
+            std::cerr << "DEBUG cycle " << cycleCount << ": memStall=" << memStall
+                      << " dMissActive=" << dMissActive << " newMissDetected=" << newMissDetected
+                      << " dMissResolvingThisCycle=" << dMissResolvingThisCycle
+                      << " stall=" << stall << " branchStall=" << branchStall << std::endl;
+        }
+
         // ==================== EX STAGE ====================
         Simulator::Instruction prevID = pipelineInfo.idInst;
         
@@ -233,7 +276,10 @@ Status runCycles(uint64_t cycles) {
         // It should be squashed before reaching EX
         if (applyFlush) {
             pipelineInfo.exInst = nop(SQUASHED);
-        } else if (stall || memStall) {
+        } else if (memStall) {
+            // D-cache miss stall: EX holds its current instruction (don't advance)
+            // pipelineInfo.exInst stays the same
+        } else if (stall) {
             if (loadUseStallTriggered) {
                 loadUseStallCount++;
             }
@@ -383,6 +429,11 @@ Status runCycles(uint64_t cycles) {
         }
 
         // ==================== IF STAGE ====================
+        if (cycleCount >= 19 && cycleCount <= 22) {
+            std::cerr << "DEBUG IF cycle " << cycleCount << ": stall=" << stall << " branchStall=" << branchStall
+                      << " memStall=" << memStall << " newMissDetected=" << newMissDetected
+                      << " flush=" << flush << " applyFlush=" << applyFlush << std::endl;
+        }
         if (applyFlush) {
             // Exception redirect: start fetching from exception handler
             // Do cache access so miss penalty starts this cycle
@@ -400,8 +451,17 @@ Status runCycles(uint64_t cycles) {
                 PC = PC + 4;
                 iMissActive = false;
             }
-        } else if (stall || branchStall || memStall) {
-            // Hold IF - do nothing
+        } else if (stall || branchStall || memStall || newMissDetected) {
+            // Hold IF - but continue I-cache miss countdown during D-cache stall
+            if (iMissRemaining > 0) {
+                iMissRemaining--;
+                if (iMissRemaining == 0) {
+                    // Miss resolved; allow fetch when stall clears
+                    iMissActive = false;
+                }
+            }
+            // If no active I-miss, keep the current IF contents and status; hold PC.
+            // Do not overwrite with a bubble so the instruction is ready when stall clears.
         } else if (flush) {
             // Branch misprediction: start fetching from correct target
             bool iHit = iCache->access(PC, CACHE_READ);
@@ -450,6 +510,13 @@ Status runCycles(uint64_t cycles) {
         if (pipelineInfo.memInst.memException) {
             pendingFlush = true;
             pendingFlushPC = 0x8000;
+        }
+
+        // Ensure IF stage is not mislabeled once an instruction is fetched.
+        if (!pipelineInfo.ifInst.isNop) {
+            if (pipelineInfo.ifInst.status == BUBBLE || pipelineInfo.ifInst.status == IDLE) {
+                pipelineInfo.ifInst.status = NORMAL;
+            }
         }
 
         doneInst = pipelineInfo.wbInst;
