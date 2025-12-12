@@ -146,30 +146,40 @@ Status runCycles(uint64_t cycles) {
 
         // ==================== WB STAGE ====================
         Simulator::Instruction prevMEM = pipelineInfo.memInst;
-        pipelineInfo.wbInst = simulator->simWB(prevMEM);
-        
-        // Determine WB status based on what came from MEM
-        if (prevMEM.isNop && prevMEM.status == IDLE) {
-            pipelineInfo.wbInst = nop(IDLE);
-        } else if (prevMEM.isNop && prevMEM.status == SQUASHED) {
-            pipelineInfo.wbInst = nop(SQUASHED);
-        } else if (pipelineInfo.wbInst.isNop) {
-            pipelineInfo.wbInst.status = BUBBLE;
-        } else {
-            pipelineInfo.wbInst.status = NORMAL;
-        }
-        
-        // Count committed instructions (includes HALT)
-        if (!pipelineInfo.wbInst.isNop && pipelineInfo.wbInst.isLegal) {
-            if (pipelineInfo.wbInst.PC != lastCommittedPC) {
-                committedDin++;
-                lastCommittedPC = pipelineInfo.wbInst.PC;
-            }
-        }
-        if (pipelineInfo.wbInst.isHalt) {
-            status = HALT;
-        }
+        if (memStall) {
+            if (dMissRemaining == (dCache->config.missLatency)) {
+                pipelineInfo.wbInst = nop(BUBBLE);
+                // pipelineInfo.memInst.status = BUBBLE;
+            } else {
 
+            }
+        } else { 
+            pipelineInfo.wbInst = simulator->simWB(prevMEM);
+        
+            // Determine WB status based on what came from MEM
+            if (prevMEM.isNop && prevMEM.status == IDLE) {
+                pipelineInfo.wbInst = nop(IDLE);
+            } else if (prevMEM.isNop && prevMEM.status == SQUASHED) {
+                pipelineInfo.wbInst = nop(SQUASHED);
+            } else if (pipelineInfo.wbInst.isNop) {
+                pipelineInfo.wbInst.status = BUBBLE;
+            } else {
+                pipelineInfo.wbInst.status = NORMAL;
+            }
+            
+            // Count committed instructions (includes HALT)
+            if (!pipelineInfo.wbInst.isNop && pipelineInfo.wbInst.isLegal) {
+                if (pipelineInfo.wbInst.PC != lastCommittedPC) {
+                    committedDin++;
+                    lastCommittedPC = pipelineInfo.wbInst.PC;
+                }
+            }
+            if (pipelineInfo.wbInst.isHalt) {
+                status = HALT;
+            }
+
+        }
+        
         // ==================== MEM STAGE with D-cache timing ====================
         Simulator::Instruction prevEX = pipelineInfo.exInst;
         
@@ -193,7 +203,7 @@ Status runCycles(uint64_t cycles) {
                 bool dHit = dCache->access(prevEX.memAddress, op);
                 if (!dHit) {
                     latchedMemInst = prevEX;
-                    dMissRemaining = dCache->config.missLatency;
+                    dMissRemaining = dCache->config.missLatency + 1;
                     if (dMissRemaining > 0) dMissRemaining--;
                     dMissActive = true;
                     pipelineInfo.memInst = latchedMemInst;
@@ -233,7 +243,7 @@ Status runCycles(uint64_t cycles) {
         // It should be squashed before reaching EX
         if (applyFlush) {
             pipelineInfo.exInst = nop(SQUASHED);
-        } else if (stall || memStall) {
+        } else if (stall) {
             if (loadUseStallTriggered) {
                 loadUseStallCount++;
             }
@@ -242,6 +252,14 @@ Status runCycles(uint64_t cycles) {
             } else {
                 pipelineInfo.exInst = nop(BUBBLE);
             }
+        } else if (memStall) {
+            if (dMissRemaining == (dCache->config.missLatency)) {
+                pipelineInfo.exInst = prevID;
+                pipelineInfo.exInst.status = NORMAL;
+            } else {
+
+            }
+            
         } else {
             // Forwarding to EX/ID values
             if (hazard(pipelineInfo.memInst, prevID.rs1)) {
@@ -288,6 +306,14 @@ Status runCycles(uint64_t cycles) {
         // If flush is being applied this cycle, squash the instruction that was in IF
         if (applyFlush) {
             pipelineInfo.idInst = nop(SQUASHED);
+        } else if (memStall) {
+            if (dMissRemaining == (dCache->config.missLatency)) {
+                pipelineInfo.idInst = nop(BUBBLE);
+                // pipelineInfo.idInst.status = NORMAL;
+            } else {
+
+            }
+
         } else if (!(stall || memStall)) {
             if (prevIF.isNop) {
                 // IF produced a NOP (during cache miss or after flush)
@@ -402,6 +428,7 @@ Status runCycles(uint64_t cycles) {
             }
         } else if (stall || branchStall || memStall) {
             // Hold IF - do nothing
+            // pipelineInfo.ifInst.status = SPECULATIVE;
         } else if (flush) {
             // Branch misprediction: start fetching from correct target
             bool iHit = iCache->access(PC, CACHE_READ);
