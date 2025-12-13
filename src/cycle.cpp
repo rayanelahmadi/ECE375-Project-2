@@ -514,6 +514,9 @@ Status runCycles(uint64_t cycles) {
                 } else {
                     pipelineInfo.ifInst = simulator->simIF(PC);
                     pipelineInfo.ifInst.status = NORMAL;
+                    if (pipelineInfo.idInst.opcode == OP_BRANCH) {
+                        pipelineInfo.ifInst.status = SPECULATIVE;
+                    }
                     PC = PC + 4;
                 }
             }
