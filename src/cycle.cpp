@@ -365,7 +365,7 @@ Status runCycles(uint64_t cycles) {
                         pipelineInfo.idInst = nop(BUBBLE);
                     }
                 } else {
-                    if (prevIF.status == SQUASHED) {
+                    if (prevIF.status == SPECULATIVE) {
                         pipelineInfo.idInst = nop(SQUASHED);
                     } else {
                         pipelineInfo.idInst = nop(BUBBLE);
@@ -484,8 +484,9 @@ Status runCycles(uint64_t cycles) {
                 iMissActive = false;
             }
             // The speculative instruction is squashed
-            pipelineInfo.ifInst = nop(SQUASHED);
-            pipelineInfo.ifInst.PC = PC;
+            pipelineInfo.ifInst = nop(SPECULATIVE);
+            // pipelineInfo.ifInst.PC = PC;
+            pipelineInfo.ifInst.PC = pipelineInfo.idInst.PC + 4;
         } else {
             // Normal I-Cache access and timing
             if (iMissRemaining > 0) {
