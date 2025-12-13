@@ -20,7 +20,7 @@ Cache::Cache(CacheConfig configParam, CacheDataType cacheType)
         for (auto& line : set) {
             line.isValid = false;
             line.tag = 0;
-            line.lruTimestamp = 0;
+            line.lruIndex = 0;
         }
     }
 }
@@ -34,7 +34,7 @@ bool Cache::access(uint64_t address, CacheOperation readWrite) {
     uint64_t tag = indexAndTag.second;
     auto& set = sets[setIndex];
 
-    // 1) Probe for a hit
+    // Probe for hit
     int hitLineIndex = -1;
     for (int way = 0; way < static_cast<int>(config.ways); ++way) {
         if (set[way].isValid && set[way].tag == tag) {
@@ -45,14 +45,14 @@ bool Cache::access(uint64_t address, CacheOperation readWrite) {
 
     if (hitLineIndex >= 0) {
         hits++;
-        set[hitLineIndex].lruTimestamp = ++lruClock;
+        set[hitLineIndex].lruIndex = ++lruCounter;
         return true;
     }
 
-    // 2) Miss path: write-allocate
+    // Miss path
     misses++;
-
-    // Choose victim: first invalid, else true LRU
+    
+    // Choose victim
     int victimIndex = -1;
     for (int way = 0; way < static_cast<int>(config.ways); ++way) {
         if (!set[way].isValid) {
@@ -61,11 +61,11 @@ bool Cache::access(uint64_t address, CacheOperation readWrite) {
         }
     }
     if (victimIndex < 0) {
-        uint64_t minTimestamp = set[0].lruTimestamp;
+        uint64_t minIndex = set[0].lruIndex;
         victimIndex = 0;
         for (int way = 1; way < static_cast<int>(config.ways); ++way) {
-            if (set[way].lruTimestamp < minTimestamp) {
-                minTimestamp = set[way].lruTimestamp;
+            if (set[way].lruIndex < minIndex) {
+                minIndex = set[way].lruIndex;
                 victimIndex = way;
             }
         }
@@ -74,7 +74,7 @@ bool Cache::access(uint64_t address, CacheOperation readWrite) {
     // Fill
     set[victimIndex].isValid = true;
     set[victimIndex].tag = tag;
-    set[victimIndex].lruTimestamp = ++lruClock;
+    set[victimIndex].lruIndex = ++lruCounter;
     return false;
 }
 

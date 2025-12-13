@@ -21,8 +21,8 @@ struct CacheConfig {
     }
 };
 
-enum CacheDataType { I_CACHE = false, D_CACHE = true };
-enum CacheOperation { CACHE_READ = false, CACHE_WRITE = true };
+enum CacheDataType { I_CACHE = 0, D_CACHE = 1 };
+enum CacheOperation { CACHE_READ = 0, CACHE_WRITE = 1 };
 
 class Cache {
 private:
@@ -36,14 +36,14 @@ private:
     struct CacheLine {
         bool isValid;
         uint64_t tag;
-        uint64_t lruTimestamp; // larger value means more recently used
+        uint64_t lruIndex; // larger value means more recently used
     };
 
     // One vector per set; each set has 'ways' lines
     std::vector<std::vector<CacheLine>> sets;
 
-    // Monotonic timestamp used to implement true LRU
-    uint64_t lruClock = 0;
+    // Indexing used to implement true LRU
+    uint64_t lruCounter = 0;
 
     inline uint64_t maskForBits(uint64_t bitCount) const {
         if (bitCount == 0) return 0ULL;
