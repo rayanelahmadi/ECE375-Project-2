@@ -230,8 +230,14 @@ Status runCycles(uint64_t cycles) {
 
         // Execute MEM stage based on D-cache state
         if (dMissActive) {
-            // Still waiting for cache - keep showing the latched instruction
-            pipelineInfo.memInst = latchedMemInst;
+            // Check if the miss is resolving this cycle
+            if (dMissRemaining > dCache->config.missLatency - 1) {
+                // Miss is resolving - execute the memory access now
+                pipelineInfo.memInst = simulator->simMEM(latchedMemInst);
+            } else {
+                // Still waiting for cache - keep showing the latched instruction
+                pipelineInfo.memInst = latchedMemInst;
+            }
             pipelineInfo.memInst.status = NORMAL;
         } else {
             // Cache hit or miss resolved - execute MEM
@@ -342,6 +348,8 @@ Status runCycles(uint64_t cycles) {
                 }
                 pipelineInfo.idInst = simulator->simNextPCResolution(prevIDInst);
 
+                
+
                 // Check for branch flush during stall resolution
                 if (!pipelineInfo.idInst.isHalt && pipelineInfo.idInst.nextPC != prevIDInst.PC + 4) {
                     flush = true;
@@ -378,7 +386,11 @@ Status runCycles(uint64_t cycles) {
                     {
                         // Forward to branch operands if ready
                         if (newIDInst.opcode == OP_BRANCH || newIDInst.opcode == OP_JALR) {
-                            if (hazard(pipelineInfo.memInst, newIDInst.rs1)) {
+                            // Forward from EX first (highest priority - just computed)
+                            if (hazard(pipelineInfo.exInst, newIDInst.rs1)) {
+                                newIDInst.op1Val = pipelineInfo.exInst.readsMem ? pipelineInfo.exInst.memResult
+                                                                                 : pipelineInfo.exInst.arithResult;
+                            } else if (hazard(pipelineInfo.memInst, newIDInst.rs1)) {
                                 newIDInst.op1Val = pipelineInfo.memInst.readsMem ? pipelineInfo.memInst.memResult
                                                                                    : pipelineInfo.memInst.arithResult;
                             } else if (hazard(pipelineInfo.wbInst, newIDInst.rs1)) {
@@ -388,7 +400,11 @@ Status runCycles(uint64_t cycles) {
                                 newIDInst.op1Val = doneInst.readsMem ? doneInst.memResult : doneInst.arithResult;
                             }
 
-                            if (hazard(pipelineInfo.memInst, newIDInst.rs2)) {
+                            // Forward from EX first (highest priority - just computed)
+                            if (hazard(pipelineInfo.exInst, newIDInst.rs2)) {
+                                newIDInst.op2Val = pipelineInfo.exInst.readsMem ? pipelineInfo.exInst.memResult
+                                                                                 : pipelineInfo.exInst.arithResult;
+                            } else if (hazard(pipelineInfo.memInst, newIDInst.rs2)) {
                                 newIDInst.op2Val = pipelineInfo.memInst.readsMem ? pipelineInfo.memInst.memResult
                                                                                    : pipelineInfo.memInst.arithResult;
                             } else if (hazard(pipelineInfo.wbInst, newIDInst.rs2)) {
