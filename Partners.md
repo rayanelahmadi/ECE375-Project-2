@@ -2,27 +2,24 @@
 
 ### Group (work in groups of 2, 3, or 4 people, adjust the number of lines as needed)
 
-- [name_1 - netid_1: email_1]
-- [name_2 - netid_2: email_2]
-- [name_3 - netid_3: email_3]
-- [name_4 - netid_4: email_4]
+Max Machado - mm5451 mm5451@princeton.edu
+Rayan Elahmadi - re2099 re2099@princeton.edu
+Bobby Diaz - rd8921 rd8921@princeton.edu
 
 ## Time Investment
 
 ### Approximately how many hours did it take you to complete this assignment?
 
-- Number of hours: [n hours]
+70
 
 ### How many additional test cases did you write to test your implementation?
-
-- Number of test cases: [n tests]
+15
 
 ## Challenges Encountered
 
 ### Did you encounter any serious problems? If yes, please describe (e.g spec was unclear).
 
-- [Yes/No]
-- [If yes, please describe the problems encountered]
+We had issue with trying to get our nops to be properly classified.
 
 ## Additional Comments
 
@@ -33,8 +30,7 @@
 
 ### If you decided to experiment with some more advanced branch prediction policies, describe them below.
 
-- [descriptions]
-- [findings]
+N/A
 
 ## Help Information
 
@@ -44,7 +40,7 @@
 - Refer to the syllabus generative AI tools policy: the policy for use of AI assistants parallels that for human collaboration. Remember that you cannot directly generate code that you submit. 
 - Write "N/A" if you did not use generative AI for any help during this project.
 
-- [describe how you used generate AI or N/A]
+We used generative AI to help us come up with ideas for use in our test cases. We also used AI to help in debugging by discussing our errors and what potential causes might be.
 
 ## Acknowledgement of Original Work
 
@@ -56,7 +52,8 @@
 >
 >> This programming assignment represents my own work in accordance with University regulations and the course syllabus.  /s/ Ada Lovelace
 
-- [Acknowledgement of student 1]
-- [Acknowledgement of student 2]
-- [Acknowledgement of student 3]
-- [Acknowledgement of student 4]
+This programming assignment represents my own work in accordance with University regulations and the course syllabus.  /s/ Max Machado
+This programming assignment represents my own work in accordance with University regulations and the course syllabus.  /s/ Rayan Elahmadi
+This programming assignment represents my own work in accordance with University regulations and the course syllabus.  /s/ Bobby Diaz
+
+
